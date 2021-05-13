@@ -1,155 +1,173 @@
-
-
 let API_URL = 'https://raw.githubusercontent.com/GeekBrainsTutorial/online-store-api/master/responses';
 
-const getRequest = (url, cb) => {
-    fetch(url)
-    .then(result => result.json())
-    .then((data) => {
-    return cb(data)})
-    .catch((error) => new Error(`maybe internet is over? or ${error}`));
+// const getRequest = (url, cb) => {
+//     fetch(url)
+//     .then(result => result.json())
+//     .then((data) => {
+//     return cb(data)})
+//     .catch((error) => new Error(`maybe internet is over? or ${error}`));
+// };
+
+let getRequest = (url) => {
+    return new Promise((resolve, reject) => {
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", url, true);
+        xhr.onreadystatechange = () => {
+            if(xhr.readyState === 4){
+                if(xhr.status !== 200){
+                    reject('Error');
+                } else {
+                    resolve(xhr.responseText);
+                }
+            }
+        };
+        xhr.send();
+    })
 };
 
-class GoodList {
-    constructor (container = '.container') {
+class List {
+    constructor(container, url, list = listContext) {
         this.container = container;
-        this._goods = []; // data
-        this._allGoods = []; // массив экземпляров товаров на основе goods;
-    
-    //this._fetchGoodsPromise();
-    this._fetchGoods();
+        this.url = url;
+        this.list = list;
+        this.goods = [];
+        this.allProducts = [];
+        this.filtered = [];
+        this._init();
+    }
+    getJson(url) {
+        return fetch(url ? url : `${API_URL + this.url}`)
+        .then((data) => data.json())
+        .catch(error => console.log(error));
 
     }
-    
-    _fetchGoods() {
-        getRequest(`${API_URL}/catalogData.json`, (data) => {
-            this._goods = data;
-            this._render();
-        });
+    handleData(data) {
+        this.goods = data;
+        this.render();
     }
 
-    _fetchGoodsPromise() {
-        let promise = new Promise((resolve, reject) => {
-           let xhr = new XMLHttpRequest();
-           xhr.open('GET', `${API_URL}/catalogData.json`, true);
-           let data;
-           xhr.onreadystatechange = () => {
-               if (xhr.readyState === 4) {
-                   if (xhr.readyState === 200) {
-                       console.log('Error in my code');
-                   } else {
-                       // console.log(xhr.responseText);
-                       resolve(xhr.responseText);
-                   }
-               }
-           };
-           xhr.send();
-        })
-        promise.then((data) => JSON.parse(data))
-        .then((data) => {
-            this._goods = data;
-            this._render();
-        });        
-    }   
+    calcSum() {
+        this.allProducts.reduce((good, sum) => {
+            sum += good.price;
+        }, 0)
+    }
 
-    _render() {
+    render() {
         const block = document.querySelector(this.container);
-        this._goods.forEach(element => {
-            const productObject = new GoodItem(element);
-            this._allGoods.push(productObject);
-            block.insertAdjacentHTML('beforeend', productObject.render());
-        });
+        for(const product of this.goods) {
+            console.log(this.constructor.name)
+            console.log(this.list[this.constructor.name])
+            
+            const productObj = new this.list[this.constructor.name](product);
+            
+            if (!productObj) {
+                return;
+            }
+            this.allProducts.push(productObj);
+            block.insertAdjacentHTML('beforeend', productObj.render());
+        }
     }
 
-    totalPrice() {
-        let priceCount = 0;
-        this._allGoods.forEach((product) => priceCount += product.price);
-         console.log(priceCount);
-        return priceCount;
+    filter(value) {
+        const regexp = new RegExp(value, 'i');
+        this.filtered = this.allProducts.filter((product) => regexp.test(product.product_name));
+        console.log(this.filtered);
+        this.allProducts.forEach((el) => {
+            const block = document.querySelector(`.product-item[data-id="${el.id_product}"]`)
+            if(!this.filtered.includes(el)) {
+                block.classList.add('invisible');
+            } else {
+                block.classList.remove('invisible');
+            }
+        })
+    }
+    _init() {
+        return false;
     }
 }
 
-
-class GoodItem {
-    constructor(product, img = '../images/product_default.jpeg') {
-        this.product_name = product.product_name;
-        this.price = product.price;
-        this.id_product = product.id_product;
+class Item {
+    constructor(element, img) {
+        this.id_product = element.id_product;
+        this.product_name = element.product_name;
+        this.price = element.price;
         this.img = img;
     }
+    render() {
+        return '';
+    }
+}
 
+class ProductsList extends List {
+    constructor(cart, container = '.products', url = "/catalogData.json") {
+        super(container, url);
+        this.cart = cart;
+        this.getJson()
+        .then((data) => this.handleData(data));
+    }
+    _init() {
+        document.querySelector('.search-form').addEventListener('input', e =>{
+            e.preventDefault(); // отменили действие события - отправка формы;
+            this.filter(document.querySelector('.search-field').value)
+        })
+        document.querySelector(this.container).addEventListener('click', e => {
+            if (e.target.classList.contains('by-btn')) {
+                addProduct(e.target.value);
+            }
+        })
+    }
+}
+    
+
+class Cart extends List {
+    constructor (container = '.cart', url = '/getBasket.json') {
+        super(container, url);
+        this.getJson()
+        .then((data) => {
+            console.log(data); 
+        this.handleData(data.contents)
+        })
+    }
+    _init() {
+        document.querySelector('.cart-btn').addEventListener('click', e => {
+            const block = document.querySelector('.cart');
+            // Если класс у элемента есть, метод classList.toggle ведёт себя как classList.remove и класс у элемента убирает. А если указанного класса у элемента нет, то classList.toggle, как и classList.add, добавляет элементу этот класс.
+            block.classList.toggle('invisible'); 
+        })
+    }
+}
+
+class ProductItem extends Item {
+    constructor(element, img = '../images/product_default.jpeg') {
+        super(element, img)
+    }
+    render() {
+        return `<div class="product-item" data-id="${this.id_product}">
+                    <img class='product_img' src=${this.img}>
+                    <h3>${this.product_name}</h3>
+                    <p>${this.price}</p> 
+                    <button class="by-btn">Добавить в корзину</button>
+                    </div>
+                </div>`;
+    }
+}
+
+class CartItem extends Item{
     render() {
         return `<div class="product-item">
         <img class='product_img' src=${this.img}>
         <h3>${this.product_name}</h3>
         <p>${this.price}</p>
         <div  class="${this.id_product}">      
-        <button class="by-btn">Добавить в корзину</button>
+        <button class="rmv-btn">удалить</button>
         </div>
     </div>`;
     }
 }
 
-//Bascet;
-
-class Bascet extends GoodList {
-
-    constructor(container = '.bascet') {
-        super(container);
-        this.goods = [];
-        this._pushBascetButton(); 
-        this._addToBascet();
-    };
-
-    _addToBascet = () => {
-        setTimeout(() => {
-            const goods = document.querySelectorAll('.by-btn');
-    
-            const addBascet = goods.forEach((good) => good.addEventListener('click', (event) => {
-                const id = Number(event.currentTarget.parentNode.className);
-                //console.log(id);
-                const product = goodList._allGoods.filter((good) => good.id_product === id)
-                this.goods.push(...product);
-                //console.log(bascet.goods);
-            }))
-        }, 100);
-    };
-    _pushBascetButton () {
-        const bascetBtn = document.querySelector('.btn-cart');
-        const productInBascet = document.querySelector('.products-in-bascet')
-        const products = document.querySelector('.products');
-        bascetBtn.addEventListener('click', (event) => {
-        products.style.display = 'none';
-        console.log(this.goods);
-        this.goods.forEach((element) => {
-            console.log(element);
-            const addProduct = new ItemInBascet(element);
-            productInBascet.insertAdjacentHTML("beforeend", addProduct.render())
-        })
-        
-        
-        });
-    };
+listContext = {
+    ProductsList: ProductItem,
+    Cart: CartItem,
 }
 
-class ItemInBascet extends GoodItem {
-    constructor (product, count = 1) {
-        super(product)
-        this.count = product.count;
-    }
-
-    totalPrice() {
-       return this.price * this.count;
-    }
-
-    render() {
-        return `<div class="product-in-basket">
-            <h3>${this.product_name}</h3>
-            <p>${this.price}</p>`
-    }
-}
-
-    
-const goodList = new GoodList('.products');
-const bascet = new Bascet('.bascet');
-
+new ProductsList(new Cart());
