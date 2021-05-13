@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div class="container">
+        <form action="#">
+            <input type="text" id="originalText">
+            <button type="submit" id="button">Скорректировать</button>
+        </form>
+        <div class="output">
+
+        </div>
+    </div>
+    <script>
+        'use strict'
+        let button = document.querySelector('#button');
+        button.addEventListener('click', (event) => {
+            let orText = document.querySelector('#originalText');
+            const doubleQuotes = orText.value.replace(/\B'/gi, '"')
+            .replace(/One/g, '\nOne') // не сообразил, как грамотно добавить перенос строки в одном выражении, подскажите, пожалуйста.
+            .replace(/Two/g, '\nTwo')
+            alert(doubleQuotes);
+        })
+    </script>
+</body>
+</html>

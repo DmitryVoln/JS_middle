@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <form action="#" style="display: flex; flex-direction: column; max-width: 500px; background-color: rgb(249, 249, 250); margin: auto;">
+            <input type="text" class="name" placeholder="Name" style="margin-bottom: 20px; border: 7px solid rgb(247, 253, 253);">
+            <input type="text" class="phone" placeholder="phone" style="margin-bottom: 20px; border: 7px solid rgb(247, 253, 253);"">
+            <input type="text" class="email" placeholder="email" style="margin-bottom: 20px; border: 7px solid rgb(247, 253, 253);">
+            <input type="text" class="text" placeholder="text" style="margin-bottom: 20px; border: 7px solid rgb(247, 253, 253);">
+            <input type="submit" id="inputButton">
+        </form>
+    </div>
+    <script>
+        'use strict';
+        
+
+        let button = document.querySelector('#inputButton'); 
+        button.addEventListener('click', e => {
+            let inputs = document.querySelectorAll('input');
+            let message = ''
+            inputs.forEach((input) => {
+                // let styleGood = input.style.borderColor = "orange";
+                // let styleBad = input.style.borderColor = "red";
+                if (input.className === 'name') {
+                    if (/[^a-zA-Zа-яА-ЯёЁ]/.test(input.value) || input.value === '') {
+                        input.style.borderColor = "red";
+                        message += 'некорректное имя,' 
+                    } else {
+                        input.style.borderColor = "rgb(247, 253, 253)";
+                    }
+                }
+                if (input.className === 'phone') {
+                     if (!(input.value.match(/\+7\(\d{3,3}\)\d{3,3}-\d{4,4}$/))) {
+                        input.style.borderColor = "red";
+                        message += ' некорректный телефон,'
+                     } else {
+                        input.style.borderColor = "rgb(247, 253, 253)";
+                    }
+
+                }
+                if (input.className === 'email') {
+                    if (!(input.value.match(/[a-z][a-z][\-\.]?[a-z]{4,4}@mail.ru$/ig))) {
+                        input.style.borderColor = "red";
+                        message += ' некорректный email,'
+                    } else {
+                        input.style.borderColor = "rgb(247, 253, 253)";
+                    }
+                }
+                if (input.className === 'text') {
+                    if (!(input.value === '' || input.value.match(/[a-zA-Zа-яА-ЯёЁ]/ig))) {
+                        input.style.borderColor = "red";
+                        message += ' некорректный текст '
+                    } else {
+                        input.style.borderColor = "rgb(247, 253, 253)";
+                    }
+                }        
+            })
+            if (message.length > 0) {
+                alert(`${message.slice(0, -1)}.`);
+            }
+        })
+    </script>
+</body>
+</html>
