@@ -55,8 +55,8 @@ class List {
     render() {
         const block = document.querySelector(this.container);
         for(const product of this.goods) {
-            console.log(this.constructor.name)
-            console.log(this.list[this.constructor.name])
+            // console.log(this.constructor.name)
+            // console.log(this.list[this.constructor.name])
             
             const productObj = new this.list[this.constructor.name](product);
             
@@ -92,6 +92,7 @@ class Item {
         this.product_name = element.product_name;
         this.price = element.price;
         this.img = img;
+        
     }
     render() {
         return '';
@@ -112,7 +113,8 @@ class ProductsList extends List {
         })
         document.querySelector(this.container).addEventListener('click', e => {
             if (e.target.classList.contains('by-btn')) {
-                addProduct(e.target.value);
+                console.log(e.target)
+                this.cart.addProduct(e.target);
             }
         })
     }
@@ -123,16 +125,72 @@ class Cart extends List {
     constructor (container = '.cart', url = '/getBasket.json') {
         super(container, url);
         this.getJson()
-        .then((data) => {
-            console.log(data); 
+        .then((data) => { 
         this.handleData(data.contents)
         })
     }
+    addProduct(element){
+        this.getJson(`${API_URL}/addToBasket.json`)
+          .then(data => {
+            if(data.result === 1){
+                console.log(element);
+              let productId = +element.dataset['id'];
+              let find = this.allProducts.find(product => product.id_product === productId);
+              console.log(find);
+              if(find){
+                find.quantity++;
+                this._updateCart(find);
+              } else {
+                let product = {
+                  id_product: productId,
+                  price: +element.dataset['price'],
+                  product_name: element.dataset['name'],
+                  quantity: 1
+                };
+                this.goods = [product];
+                // далее вызывая метод render, мы добавим в allProducts только его, тем самым избегая лишнего перерендера.
+                this.render();
+              }
+            } else {
+              alert('Error');
+            }
+          })
+      }
+      removeProduct(element){
+        this.getJson(`${API_URL}/deleteFromBasket.json`)
+          .then(data => {
+            if(data.result === 1){
+              let productId = +element.dataset['id'];
+              let find = this.allProducts.find(product => product.id_product === productId);
+              if(find.quantity > 1){ // если товара > 1, то уменьшаем количество на 1
+                find.quantity--;
+                this._updateCart(find);
+              } else {
+                this.allProducts.splice(this.allProducts.indexOf(find), 1);
+                document.querySelector(`.cart-item[data-id="${productId}"]`).remove();
+              }
+            } else {
+              alert('Error');
+            }
+          })
+      }
+      _updateCart(product){
+          //console.log(product.id)
+        let block = document.querySelector(`.cart-item[data-id="${product.id_product}"]`);
+        block.querySelector('.quantity').textContent = `Количество: ${product.quantity}`;
+        block.querySelector('.price').textContent = `${product.quantity * product.price}`;
+      }
     _init() {
         document.querySelector('.cart-btn').addEventListener('click', e => {
             const block = document.querySelector('.cart');
             // Если класс у элемента есть, метод classList.toggle ведёт себя как classList.remove и класс у элемента убирает. А если указанного класса у элемента нет, то classList.toggle, как и classList.add, добавляет элементу этот класс.
             block.classList.toggle('invisible'); 
+        })
+        document.querySelector(this.container).addEventListener('click', e => {
+            if(e.target.classList.contains('rmv-btn')){
+              console.log(e.target);
+              this.removeProduct(e.target);
+            }
         })
     }
 }
@@ -145,21 +203,29 @@ class ProductItem extends Item {
         return `<div class="product-item" data-id="${this.id_product}">
                     <img class='product_img' src=${this.img}>
                     <h3>${this.product_name}</h3>
-                    <p>${this.price}</p> 
-                    <button class="by-btn">Добавить в корзину</button>
+                    <p>${this.price}</p>
+                    <button class="by-btn"  data-id="${this.id_product}"
+                                            data-name="${this.product_name}"
+                                            data-price="${this.price}">
+                        Добавить в корзину</button>
                     </div>
                 </div>`;
     }
 }
 
 class CartItem extends Item{
+    constructor(element, img = '../images/product_default.jpeg'){
+    super(element, img);
+    this.quantity = element.quantity;
+  }
     render() {
-        return `<div class="product-item">
+        return `<div class="cart-item" data-id="${this.id_product}">
         <img class='product_img' src=${this.img}>
-        <h3>${this.product_name}</h3>
-        <p>${this.price}</p>
+        <h3 data-name="">${this.product_name}</h3>
+        <p class="price">${this.price}</p>
+        <p class="quantity">Количество: ${this.quantity}</p>
         <div  class="${this.id_product}">      
-        <button class="rmv-btn">удалить</button>
+        <button class="rmv-btn" data-id="${this.id_product}">удалить</button>
         </div>
     </div>`;
     }
